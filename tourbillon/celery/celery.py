@@ -10,7 +10,7 @@ def get_celery_stats(agent):
     config = agent.pluginconfig['celery']
     db_config = config['database']
 
-    yield from agent.async_create_database(**db_config)
+    agent.async_create_database(**db_config)
     app = Celery(broker=config['broker'])
     state = app.events.State()
 

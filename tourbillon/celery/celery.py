@@ -8,13 +8,14 @@ logger = logging.getLogger(__name__)
 def get_celery_stats(agent):
     agent.run_event.wait()
     config = agent.pluginconfig['celery']
+    db_config = config['database']
     try:
         logger.debug('try to create the database...')
-        agent.create_database('celery')
-        agent.create_retention_policy('celery_rp',
-                                      '365d',
-                                      '1',
-                                      'celery')
+        agent.create_database(db_config['name'])
+        agent.create_retention_policy('{}_rp'.format(db_config['name']),
+                                      db_config['duration'],
+                                      db_config['replication'],
+                                      db_config['name'])
         logger.info('database "%s" created successfully', 'celery')
     except:
         pass
@@ -41,7 +42,7 @@ def get_celery_stats(agent):
                         'started': task.started
                     }
                 }]
-                agent.push(data, 'celery')
+                agent.push(data, db_config['name'])
 
     def worker_heartbeat(event):
         state.event(event)
@@ -67,7 +68,7 @@ def get_celery_stats(agent):
                     'mem': worker_stat['rusage']['maxrss'],
                 }
             }]
-            agent.push(data, 'celery')
+            agent.push(data, db_config['name'])
 
     with app.connection() as connection:
         recv = app.events.Receiver(connection, handlers={
@@ -75,6 +76,8 @@ def get_celery_stats(agent):
             '*': announce_failed_tasks,
         })
         while agent.run_event.is_set():
-            recv.capture(limit=config['limit'], timeout=None, wakeup=True)
+            recv.capture(limit=config['limit'],
+                         timeout=config['timeout'],
+                         wakeup=config['wakeup'])
 
     logger.debug('get_celery_stats exited')

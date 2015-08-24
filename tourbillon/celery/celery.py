@@ -9,16 +9,8 @@ def get_celery_stats(agent):
     agent.run_event.wait()
     config = agent.pluginconfig['celery']
     db_config = config['database']
-    try:
-        logger.debug('try to create the database...')
-        agent.create_database(db_config['name'])
-        agent.create_retention_policy('{}_rp'.format(db_config['name']),
-                                      db_config['duration'],
-                                      db_config['replication'],
-                                      db_config['name'])
-        logger.info('database "%s" created successfully', 'celery')
-    except:
-        pass
+
+    yield from agent.async_create_database(**db_config)
     app = Celery(broker=config['broker'])
     state = app.events.State()
 

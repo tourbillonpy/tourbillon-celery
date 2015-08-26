@@ -5,16 +5,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_celery_stats(agent):
+def get_celery_tasks_stats(agent):
     agent.run_event.wait()
     config = agent.pluginconfig['celery']
     db_config = config['database']
 
-    yield from agent.async_create_database(**db_config)
+    agent.async_create_database(**db_config)
     app = Celery(broker=config['broker'])
     state = app.events.State()
 
-    def announce_failed_tasks(event):
+    def celery_tasks(event):
         state.event(event)
         if 'uuid' in event:
             task = state.tasks.get(event['uuid'])
@@ -22,7 +22,7 @@ def get_celery_stats(agent):
 
             if task.state in ['SUCCESS', 'FAILURE'] and task.name is not None:
                 data = [{
-                    'measurement': 'tasks',
+                    'measurement': 'task_status',
                     'tags': {
                         'worker': task.worker.hostname,
                         'task_name': task.name,
@@ -36,6 +36,27 @@ def get_celery_stats(agent):
                 }]
                 agent.push(data, db_config['name'])
 
+    with app.connection() as connection:
+        recv = app.events.Receiver(connection, handlers={
+            '*': celery_tasks,
+        })
+        while agent.run_event.is_set():
+            recv.capture(limit=config['limit'],
+                         timeout=config['timeout'],
+                         wakeup=config['wakeup'])
+
+    logger.debug('get_celery_stats exited')
+
+
+def get_celery_workers_stats(agent):
+    agent.run_event.wait()
+    config = agent.pluginconfig['celery']
+    db_config = config['database']
+
+    agent.async_create_database(**db_config)
+    app = Celery(broker=config['broker'])
+    state = app.events.State()
+
     def worker_heartbeat(event):
         state.event(event)
 
@@ -47,15 +68,15 @@ def get_celery_stats(agent):
         # print('\nEVENT: {}'.format(event))
         if 'active' in event and event['active'] > 0:
             data = [{
-                'measurement': 'workers',
+                'measurement': 'worker_status',
                 'tags': {
-                    'name': event['hostname'],
-                    #'broker': broker
+                    'hostname': event['hostname'],
+                    # 'broker': broker
                     # 'pid': event['pid'],
                 },
                 'fields': {
                     'processed': event['processed'],
-                    'timestamp': event['timestamp'],
+                    # 'timestamp': event['timestamp'],
                     'active': event['active'],
                     'mem': worker_stat['rusage']['maxrss'],
                 }
@@ -65,11 +86,8 @@ def get_celery_stats(agent):
     with app.connection() as connection:
         recv = app.events.Receiver(connection, handlers={
             'worker-heartbeat': worker_heartbeat,
-            '*': announce_failed_tasks,
         })
         while agent.run_event.is_set():
             recv.capture(limit=config['limit'],
                          timeout=config['timeout'],
                          wakeup=config['wakeup'])
-
-    logger.debug('get_celery_stats exited')

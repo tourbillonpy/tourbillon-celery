@@ -16,6 +16,7 @@ def get_celery_stats(agent):
 
     def handle_task_event(event):
         state.event(event)
+        logger.debug('task event: %s', event)
         if 'uuid' in event:
             task = state.tasks.get(event['uuid'])
 
@@ -37,7 +38,7 @@ def get_celery_stats(agent):
 
     def handle_worker_event(event):
         state.event(event)
-
+        logger.debug('worker event: %s', event)
         worker_name = event['hostname']
         inspect = app.control.inspect([])
         worker_stat = inspect.stats()[worker_name]

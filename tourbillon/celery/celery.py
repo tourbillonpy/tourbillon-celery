@@ -7,18 +7,17 @@ logger = logging.getLogger(__name__)
 
 def get_celery_stats(agent):
     agent.run_event.wait()
-    config = agent.pluginconfig['celery']
+    config = agent.config['celery']
     db_config = config['database']
+    agent.create_database(**db_config)
 
-    agent.async_create_database(**db_config)
     app = Celery(broker=config['broker'])
     state = app.events.State()
 
-    def announce_failed_tasks(event):
+    def handle_task_event(event):
         state.event(event)
         if 'uuid' in event:
             task = state.tasks.get(event['uuid'])
-            # print('\nEVENT: {}'.format(event))
 
             if task.state in ['SUCCESS', 'FAILURE'] and task.name is not None:
                 data = [{
@@ -36,22 +35,18 @@ def get_celery_stats(agent):
                 }]
                 agent.push(data, db_config['name'])
 
-    def worker_heartbeat(event):
+    def handle_worker_event(event):
         state.event(event)
 
         worker_name = event['hostname']
         inspect = app.control.inspect([])
         worker_stat = inspect.stats()[worker_name]
 
-        # print('WORKER STATE: {}'.format(worker_stat))
-        # print('\nEVENT: {}'.format(event))
         if 'active' in event and event['active'] > 0:
             data = [{
                 'measurement': 'workers',
                 'tags': {
-                    'name': event['hostname'],
-                    #'broker': broker
-                    # 'pid': event['pid'],
+                    'name': event['hostname']
                 },
                 'fields': {
                     'processed': event['processed'],
@@ -64,12 +59,15 @@ def get_celery_stats(agent):
 
     with app.connection() as connection:
         recv = app.events.Receiver(connection, handlers={
-            'worker-heartbeat': worker_heartbeat,
-            '*': announce_failed_tasks,
+            'worker-heartbeat': handle_worker_event,
+            '*': handle_task_event,
         })
         while agent.run_event.is_set():
-            recv.capture(limit=config['limit'],
-                         timeout=config['timeout'],
-                         wakeup=config['wakeup'])
+            try:
+                recv.capture(limit=config['limit'],
+                             timeout=config['timeout'],
+                             wakeup=config['wakeup'])
+            except:
+                logger.exception('cannot get celery stats')
 
     logger.debug('get_celery_stats exited')

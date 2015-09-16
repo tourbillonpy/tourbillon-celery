@@ -46,7 +46,7 @@ def get_celery_tasks_stats(agent):
                          timeout=config['timeout'],
                          wakeup=config['wakeup'])
 
-    logger.debug('get_celery_stats exited')
+    logger.debug('get_celery_task_stats exited')
 
 
 def get_celery_workers_stats(agent):
@@ -92,3 +92,4 @@ def get_celery_workers_stats(agent):
             recv.capture(limit=config['limit'],
                          timeout=config['timeout'],
                          wakeup=config['wakeup'])
+    logger.debug('get_celery_worker_stats exited')

@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def get_celery_tasks_stats(agent):
     agent.run_event.wait()
-    config = agent.pluginconfig['celery']
+    config = agent.config['celery']
     db_config = config['database']
 
     agent.async_create_database(**db_config)
@@ -18,6 +18,7 @@ def get_celery_tasks_stats(agent):
         state.event(event)
         if 'uuid' in event:
             task = state.tasks.get(event['uuid'])
+            logger.debug(task)
             # print('\nEVENT: {}'.format(event))
 
             if task.state in ['SUCCESS', 'FAILURE'] and task.name is not None:
@@ -45,12 +46,12 @@ def get_celery_tasks_stats(agent):
                          timeout=config['timeout'],
                          wakeup=config['wakeup'])
 
-    logger.debug('get_celery_stats exited')
+    logger.debug('get_celery_task_stats exited')
 
 
 def get_celery_workers_stats(agent):
     agent.run_event.wait()
-    config = agent.pluginconfig['celery']
+    config = agent.config['celery']
     db_config = config['database']
 
     agent.async_create_database(**db_config)
@@ -91,3 +92,4 @@ def get_celery_workers_stats(agent):
             recv.capture(limit=config['limit'],
                          timeout=config['timeout'],
                          wakeup=config['wakeup'])
+    logger.debug('get_celery_worker_stats exited')

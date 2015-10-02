@@ -1,8 +1,21 @@
 from celery import Celery
+from celery.events import EventReceiver
 import logging
 
 
 logger = logging.getLogger(__name__)
+
+
+class TourbillonReceiver(EventReceiver):
+
+    def __init__(self, stop_event, *args, **kwargs):
+        super(TourbillonReceiver, self).__init__(*args, **kwargs)
+        self.stop_event = stop_event
+
+    @property
+    def should_stop(self):
+        logger.debug('should stop checked')
+        return not self.stop_event.is_set()
 
 
 def get_celery_stats(agent):
@@ -59,16 +72,17 @@ def get_celery_stats(agent):
             agent.push(data, db_config['name'])
 
     with app.connection() as connection:
-        recv = app.events.Receiver(connection, handlers={
+        Receiver = app.subclass_with_self(TourbillonReceiver,
+                                          reverse='events.Receiver')
+        recv = Receiver(agent.run_event, connection, handlers={
             'worker-heartbeat': handle_worker_event,
             '*': handle_task_event,
         })
-        while agent.run_event.is_set():
-            try:
-                recv.capture(limit=config['limit'],
-                             timeout=config['timeout'],
-                             wakeup=config['wakeup'])
-            except:
-                logger.exception('cannot get celery stats')
+
+        try:
+            logger.debug('start capturing events')
+            recv.capture()
+        except:
+            logger.exception('cannot get celery stats')
 
     logger.debug('get_celery_stats exited')

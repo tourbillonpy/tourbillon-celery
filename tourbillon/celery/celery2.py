@@ -42,9 +42,9 @@ def get_celery_stats(agent):
                         'state': task.state,
                     },
                     'fields': {
-                        'runtime': task.runtime if task.runtime else 0,
-                        'timestamp': task.timestamp,
-                        'started': task.started
+                        'runtime': float(task.runtime if task.runtime else 0),
+                        'timestamp': float(task.timestamp),
+                        'started': float(task.started)
                     }
                 }]
                 agent.push(data, db_config['name'])
@@ -64,7 +64,7 @@ def get_celery_stats(agent):
                 },
                 'fields': {
                     'processed': event['processed'],
-                    'timestamp': event['timestamp'],
+                    'timestamp': float(event['timestamp']),
                     'active': event['active'],
                     'mem': worker_stat['rusage']['maxrss'],
                 }

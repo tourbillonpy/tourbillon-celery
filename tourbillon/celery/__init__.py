@@ -1,1 +1,1 @@
-from .celery import get_celery_tasks_stats, get_celery_workers_stats
+from .celery2 import get_celery_stats

@@ -1,4 +1,4 @@
-About Tourbillon Celery Plugin
+About tourbillon-celery
 ******************************
 
 

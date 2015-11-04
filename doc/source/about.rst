@@ -5,6 +5,11 @@ What is tourbillon-celery
 =========================
 
 tourbillon-celery is a tourbillon plugin that can collect metrics from Celery, an asynchronous task queue/job queue. 
+It consists of a single metrics collector function (``get_celery_stats``) that listen to celery events and extracts metrics from them.
+
+See :doc:`measurements` for more information.
+
+
 
 For more information about tourbillon see `https://github.com/tourbillonpy/tourbillon-agent <https://github.com/tourbillonpy/tourbillon-agent>`_.
 
@@ -25,3 +30,4 @@ Contribute
 If you want to contribute to the project, you can submit bugs, feature requests or fork the github repository and submit your pull request.
 
 Visit the `Github project page <https://github.com/tourbillonpy/tourbillon-celery>`_ for more information.
+

@@ -17,7 +17,7 @@ Tags
 ----
 	* **name**: worker name
 
-Values
+Fields
 ------
 
 	* **timestamp**: event timestamp

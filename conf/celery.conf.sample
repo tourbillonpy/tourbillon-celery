@@ -4,8 +4,5 @@
 		"duration": "365d",
 		"replication": "1"
 	},
-	"broker": "amqp://localhost:5672",
-	"limit": 1,
-	"timeout": false,
-	"wakeup": true
+	"broker": "amqp://localhost:5672"
 }
